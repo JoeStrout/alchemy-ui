@@ -1,1 +1,1 @@
-/Users/jstrout/DailyPurge/layout/layout.ms
+../../../layout/layout.ms

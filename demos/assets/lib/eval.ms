@@ -1,1 +1,1 @@
-/Users/jstrout/DailyPurge/layout/eval.ms
+../../../layout/eval.ms
