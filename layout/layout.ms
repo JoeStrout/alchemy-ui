@@ -1,9 +1,9 @@
 // Layout Engine
 //
-// Resolves a hierarchy of boxes with formula-based positioning.
+// Resolves a hierarchy of.boxByName with formula-based positioning.
 // Each box specifies exactly 2 horizontal (left/right/center/width)
 // and 2 vertical (top/bottom/middle/height) constraints, which may
-// be numbers or formulas referencing other boxes' properties.
+// be numbers or formulas referencing other.boxByName' properties.
 
 import "eval"
 import "listUtil"
@@ -26,18 +26,24 @@ Box.bottom = function; return self.top + self.height; end function
 Box.center = function; return self.left + self.width/2; end function
 Box.middle = function; return self.top + self.height/2; end function
 
+Box.contains = function(point)
+	return self.left <= point.x < self.right and
+	       self.top <= point.y < self.bottom
+end function
+
 // --- Layout engine ---
 Layout = {}
 Layout.root = null
-Layout.boxes = null
-Layout.constants = null
+Layout.boxByName = null  // key: name; value: Box
+Layout.boxes = null      // list of boxes, in creation order
+Layout.constants = null  // key: identifier; value: numeric value
 
 Layout.init = function
-	self.boxes = {}
+	self.boxByName = {}
+	self.boxes = []
 	self.constants = {}
 	return self
 end function
-
 
 Layout.newBox = function(name, parent, index)
 	box = new Box
@@ -60,8 +66,18 @@ Layout.newBox = function(name, parent, index)
 		parent.children.push box
 		box.parent = parent
 	end if
-	self.boxes[box.fullName] = box
+	self.boxByName[box.fullName] = box
+	self.boxes.push box
 	return box
+end function
+
+Layout.boxHit = function(point)
+	// iterate.boxByName backwards, on the assumption that the later
+	//.boxByName are the ones more "on top"
+	for i in range(self.boxes.len-1, 0, -1)
+		if self.boxes[i].contains(point) then return self.boxes[i]
+	end for
+	return null
 end function
 
 // Replace self/parent/root prefixes in a formula with actual box names.
@@ -181,7 +197,7 @@ Layout.extractDeps = function(formula, box)
 		prop = tok[dotPos+1:]
 		// If the referenced property is directly specified as a spec,
 		// depend on that spec node.  Otherwise depend on the derive node.
-		if self.boxes.hasIndex(boxName) and self.boxes[boxName].specs.hasIndex(prop) then
+		if self.boxByName.hasIndex(boxName) and self.boxByName[boxName].specs.hasIndex(prop) then
 			depKey = boxName + ":" + prop
 		else if prop == "left" or prop == "width" or prop == "right" or prop == "center" then
 			depKey = boxName + ":H"
@@ -208,8 +224,8 @@ Layout.resolve = function
 		if dotPos == null then return null
 		boxName = ident[:dotPos]
 		prop = ident[dotPos+1:]
-		if not layout.boxes.hasIndex(boxName) then return null
-		box = layout.boxes[boxName]
+		if not layout.boxByName.hasIndex(boxName) then return null
+		box = layout.boxByName[boxName]
 		if prop == "left" then return box.left
 		if prop == "width" then return box.width
 		if prop == "top" then return box.top
@@ -222,7 +238,7 @@ Layout.resolve = function
 	end function
 
 	// Reset box properties
-	for box in self.boxes.values
+	for box in self.boxes
 		specs = box.specs
 		for prop in ["left", "width", "top", "height", "right", "bottom", "center", "middle"]
 			if not specs.hasIndex(prop) or not eval.isNumber(specs[prop]) then
@@ -236,8 +252,7 @@ Layout.resolve = function
 	// Build dependency graph
 	// Nodes: "box:prop" for each spec, "box:H" and "box:V" for derivation steps
 	nodes = {}
-	for kv in self.boxes
-		box = kv.value
+	for box in self.boxes
 		fn = box.fullName
 		hSpecKeys = []
 		vSpecKeys = []
@@ -301,7 +316,7 @@ Layout.resolve = function
 
 	// Check for unresolved properties
 	errors = []
-	for box in self.boxes.values
+	for box in self.boxes
 		for prop in ["left", "width", "top", "height"]
 			if box[prop] == null then errors.push box.fullName + "." + prop
 		end for
