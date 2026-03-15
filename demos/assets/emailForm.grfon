@@ -1,0 +1,90 @@
+// This is an "email form" UI layout, for use with emailForm.ms.
+// Each map below (title, nameLabel, etc.) defines one Box in the 
+// Alchemy Layout system, and must have:
+// - exactly TWO horizontal properties (left, right, width, center)
+// - exactly TWO vertical properties (top, bottom, height, middle)
+// You can also add any additional properties you need for your own
+// widget system.  In this demo, we use `color` and `text` to
+// decorate the boxes we're going to draw.
+
+gap: 12
+fieldH: 32
+btnW: 120
+
+title: {
+	left: gap
+	width: root.width - gap * 2
+	top: gap
+	height: 40
+	color: #3C64B4
+	text: Contact Form
+}
+
+nameLabel: {
+	left: gap
+	width: 80
+	top: title.bottom + gap * 2
+	height: fieldH
+	color: #50505A
+	text: Name
+}
+
+nameField: {
+	left: nameLabel.right + gap
+	right: root.right - gap
+	top: nameLabel.top
+	height: fieldH
+	color: #32323C
+}
+
+emailLabel: {
+	left: gap
+	width: nameLabel.width
+	top: nameField.bottom + gap
+	height: fieldH
+	color: #50505A
+	text: Email
+}
+
+emailField: {
+	left: emailLabel.right + gap
+	top: emailLabel.top
+	right: root.right - gap
+	height: fieldH
+	color: #32323C
+}
+
+msgLabel: {
+	left: gap
+	width: emailLabel.width
+	top: emailLabel.bottom + gap
+	height: fieldH
+	color: #50505A
+	text: Message
+}
+
+msgBox: {
+	left: msgLabel.right + gap
+	right: root.right - gap
+	top: msgLabel.top
+	bottom: okBtn.top - gap
+	color: #32323C
+}
+
+okBtn: {
+	right: root.right - gap
+	width: btnW
+	bottom: root.bottom - gap
+	height: fieldH
+	color: #288C3C
+	text: OK
+}
+
+cancelBtn: {
+	right: okBtn.left - gap
+	width: btnW
+	top: okBtn.top
+	height: fieldH
+	color: #8C3232
+	text: Cancel
+}
