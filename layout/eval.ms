@@ -38,11 +38,15 @@ lex = function(exprStr)
 			token = ""
 		else if c >= "0" and c <= "9" then
 			if state == State.NUMBER then
-				token = token + c
+				token += c
 			else
 				if token then result.push token
 				state = State.NUMBER
 				token = c
+			end if
+		else if c == "." then
+			if state == State.NUMBER or state == State.IDENTIFIER then
+				token += c
 			end if
 		else if "+-*/^()=".indexOf(c) != null then
 			if token then result.push token
@@ -50,7 +54,7 @@ lex = function(exprStr)
 			token = c
 		else
 			if state == State.IDENTIFIER then
-				token = token + c
+				token +=c
 			else
 				if token then result.push token
 				state = State.IDENTIFIER

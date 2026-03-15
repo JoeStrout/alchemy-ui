@@ -1,0 +1,102 @@
+// This is a "preferences" UI layout, for use with prefsDialog.ms.
+// Each map below (title, nameLabel, etc.) defines one Box in the 
+// Alchemy Layout system, and must have:
+// - exactly TWO horizontal properties (left, right, width, center)
+// - exactly TWO vertical properties (top, bottom, height, middle)
+// You can also add any additional properties you need for your own
+// widget system.  In this demo, we use `color` and `text` to
+// decorate the boxes we're going to draw.
+
+gap: 12
+marginH: 20
+marginV: 12
+fieldH: 32
+btnW: 120
+
+ColorGrp: {
+	text: Code Colors
+	class: GroupBox
+	top: root.top + marginV*2   // ToDo: "root.top +" shouldn't be needed?
+	left: root.left + marginH
+	right: root.left + root.width * 0.6
+	bottom: SampleGrp.bottom
+}
+
+FontSettingsGrp: {
+	left: ColorGrp.right + gap
+	top: ColorGrp.top
+	right: root.right - marginH
+	bottom: MarginChk.bottom + marginV
+}
+
+FontLabel: {
+	class: Label
+	left: FontSettingsGrp.left + marginH
+	top: FontSettingsGrp.top + marginV
+	right: FontSettingsGrp.right - marginH
+	height: fieldH
+	text: Font\:
+}
+
+FontPop: {
+	class: PopupMenu
+	left: FontLabel.left
+	top: FontLabel.bottom
+	right: FontLabel.right
+	height: fieldH
+	text: Courier New
+}
+
+SizeLabel: {
+	class: Label
+	left: FontLabel.left
+	top: FontPop.bottom + gap
+	right: SizePop.right
+	height: fieldH
+	text: Size\:
+}
+
+SizePop: {
+	class: PopupMenu
+	left: FontLabel.left
+	top: SizeLabel.bottom
+	width: 64
+	height: fieldH
+	text: 10
+}
+
+MarginChk: {
+	class: Checkbox
+	left: FontLabel.left
+	top: SizePop.bottom + gap
+	width: FontPop.width  // ToDo: add support for `content.width` to auto-calculate!
+	height: fieldH
+	text: Margin Indicator Bar
+}
+
+SampleGrp: {
+	top: FontSettingsGrp.bottom + gap
+	left: FontSettingsGrp.left
+	right: FontSettingsGrp.right
+	height: 80
+	text: Sample
+}
+
+
+okBtn: {
+	right: root.right - gap
+	width: btnW
+	bottom: root.bottom - gap
+	height: fieldH
+	color: #288C3C
+	text: OK
+}
+
+cancelBtn: {
+	right: okBtn.left - gap
+	width: btnW
+	top: okBtn.top
+	height: fieldH
+	color: #8C3232
+	text: Cancel
+}
