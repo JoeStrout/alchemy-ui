@@ -21,11 +21,15 @@ State = {
 // lookupFunc is called.
 variables = {}
 
-// lookupFunc: optional function invoked when eval needs to look up the 
-// value of an identifier, such as "X" or "foo.bar.baz".  This function 
-// should return the numerical value, or null if not found.  Note that 
+// lookupFunc: optional function invoked when eval needs to look up the
+// value of an identifier, such as "X" or "foo.bar.baz".  This function
+// should return the numerical value, or null if not found.  Note that
 // this function is not called if variables contains the identifier.
-lookupFunc = null // function(identStr) --> number or null
+// Signature: function(identStr, context) --> number or null
+lookupFunc = null
+
+// context: optional value passed as second argument to lookupFunc.
+context = null
 
 lex = function(exprStr)
 	result = []
@@ -150,7 +154,7 @@ evalAtom = function(tokens)
 	if isNumber(tok) then return tok.val
 	if variables.hasIndex(tok) then return variables[tok]
 	if @lookupFunc then
-		value = lookupFunc(tok)
+		value = lookupFunc(tok, context)
 		if value != null then return value
 	end if
 	// ToDo: handle undefined identifier error

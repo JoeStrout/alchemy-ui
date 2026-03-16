@@ -1,5 +1,5 @@
 // This is a "preferences" UI layout, for use with prefsDialog.ms.
-// Each map below (title, nameLabel, etc.) defines one Box in the 
+// Each map below (title, nameLabel, etc.) defines one Box in the
 // Alchemy Layout system, and must have:
 // - exactly TWO horizontal properties (left, right, width, center)
 // - exactly TWO vertical properties (top, bottom, height, middle)
@@ -10,22 +10,24 @@
 gap: 12
 marginH: 20
 marginV: 12
-fieldH: 32
+fieldH: 28
 btnW: 120
+minWindowWidth: 550
+minWindowHeight: 450
 
 ColorGrp: {
 	text: Code Colors
 	class: GroupBox
-	top: root.top + marginV*2   // ToDo: "root.top +" shouldn't be needed?
-	left: root.left + marginH
-	right: root.left + root.width * 0.6
+	top: marginV*2
+	left: marginH
+	right: width * 0.6
 	bottom: SampleGrp.bottom
 }
 
 FontSettingsGrp: {
 	left: ColorGrp.right + gap
 	top: ColorGrp.top
-	right: root.right - marginH
+	right: right - marginH
 	bottom: MarginChk.bottom + marginV
 }
 
@@ -82,11 +84,19 @@ SampleGrp: {
 	text: Sample
 }
 
+Notes: {
+	left: ColorGrp.left
+	right: SampleGrp.right
+	top: ColorGrp.bottom + gap
+	bottom: okBtn.top - gap
+	text: Notes
+	color: #666666
+}	
 
 okBtn: {
-	right: root.right - gap
+	right: right - marginH
 	width: btnW
-	bottom: root.bottom - gap
+	bottom: bottom - gap
 	height: fieldH
 	color: #288C3C
 	text: OK

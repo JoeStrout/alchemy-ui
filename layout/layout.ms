@@ -80,22 +80,29 @@ Layout.boxHit = function(point)
 	return null
 end function
 
+// Positional property names (used for bare-term resolution in preprocess)
+_posProps = "left right top bottom width height center middle".split
+
 // Replace self/parent/root prefixes in a formula with actual box names.
+// Also resolves bare positional terms (e.g. "width") to "parent.prop".
 Layout.preprocess = function(formula, box)
 	if formula isa number then return formula
 	tokens = eval.lex(formula)
 	for i in tokens.indexes
 		tok = tokens[i]
 		dotPos = tok.indexOf(".")
-		if dotPos == null then continue
-		prefix = tok[:dotPos]
-		suffix = tok[dotPos:]
-		if prefix == "self" then
-			tokens[i] = box.fullName + suffix
-		else if prefix == "parent" and box.parent != null then
-			tokens[i] = box.parent.fullName + suffix
-		else if prefix == "root" and self.root != null then
-			tokens[i] = self.root.fullName + suffix
+		if dotPos != null then
+			prefix = tok[:dotPos]
+			suffix = tok[dotPos:]
+			if prefix == "self" then
+				tokens[i] = box.fullName + suffix
+			else if prefix == "parent" and box.parent != null then
+				tokens[i] = box.parent.fullName + suffix
+			else if prefix == "root" and self.root != null then
+				tokens[i] = self.root.fullName + suffix
+			end if
+		else if _posProps.indexOf(tok) != null and box.parent != null then
+			tokens[i] = box.parent.fullName + "." + tok
 		end if
 	end for
 	return tokens.join(" ")
@@ -110,15 +117,18 @@ Layout.canEval = function(formula)
 		if c >= "0" and c <= "9" then continue
 		if "+-*/^()=".indexOf(c) != null then continue
 		if eval.variables.hasIndex(tok) then continue
-		if eval.lookupFunc(tok) != null then continue
+		if eval.lookupFunc(tok, null) != null then continue
 		return false
 	end for
 	return true
 end function
 
 // Derive left and width from whichever two horizontal properties are known.
+// Reads from box._local (parent-local coords), writes screen coords to box.
 Layout.deriveH = function(box)
-	L = box.left; W = box.width; R = box.right; C = box.center
+	loc = box._local
+	L = loc.get("left"); W = loc.get("width")
+	R = loc.get("right"); C = loc.get("center")
 	count = (L != null) + (W != null) + (R != null) + (C != null)
 	if count < 2 then return false
 	if L != null and W != null then
@@ -136,21 +146,19 @@ Layout.deriveH = function(box)
 		L = R - W
 	end if
 	if L == null or W == null then return false
-	changed = false
-	if box.left == null then
-		box.left = L
-		changed = true
-	end if
-	if box.width == null then
-		box.width = W
-		changed = true
-	end if
-	return changed
+	// Convert local coords to screen coords
+	if box.parent != null then L = L + box.parent.left
+	box.left = L
+	box.width = W
+	return true
 end function
 
 // Derive top and height from whichever two vertical properties are known.
+// Reads from box._local (parent-local coords), writes screen coords to box.
 Layout.deriveV = function(box)
-	T = box.top; H = box.height; B = box.bottom; M = box.middle
+	loc = box._local
+	T = loc.get("top"); H = loc.get("height")
+	B = loc.get("bottom"); M = loc.get("middle")
 	count = (T != null) + (H != null) + (B != null) + (M != null)
 	if count < 2 then return false
 	if T != null and H != null then
@@ -168,16 +176,11 @@ Layout.deriveV = function(box)
 		T = B - H
 	end if
 	if T == null or H == null then return false
-	changed = false
-	if box.top == null then 
-		box.top = T
-		changed = true
-	end if
-	if box.height == null then
-		box.height = H
-		changed = true
-	end if
-	return changed
+	// Convert local coords to screen coords
+	if box.parent != null then T = T + box.parent.top
+	box.top = T
+	box.height = H
+	return true
 end function
 
 // Extract dependency node keys from a formula for a given box.
@@ -217,7 +220,7 @@ Layout.resolve = function
 	// Set up eval lookupFunc
 	eval.variables = {}
 	layout = self
-	eval.lookupFunc = function(ident)
+	eval.lookupFunc = function(ident, context)
 		if layout.constants.hasIndex(ident) then return layout.constants[ident]
 
 		dotPos = ident.indexOf(".")
@@ -226,26 +229,75 @@ Layout.resolve = function
 		prop = ident[dotPos+1:]
 		if not layout.boxByName.hasIndex(boxName) then return null
 		box = layout.boxByName[boxName]
-		if prop == "left" then return box.left
-		if prop == "width" then return box.width
-		if prop == "top" then return box.top
-		if prop == "height" then return box.height
-		if prop == "right" then return box.right
-		if prop == "bottom" then return box.bottom
-		if prop == "center" then return box.center
-		if prop == "middle" then return box.middle
-		return null
+		// Try box properties first (screen coords, set by deriveH/V).
+		// Fall back to _local (parent-local coords from spec evaluation).
+		// For derived props (right/center/bottom/middle), only trust them
+		// if the base properties are resolved (to avoid null+null=0).
+		value = null
+		isScreen = true
+		if prop == "left" then value = box.left
+		if prop == "width" then value = box.width
+		if prop == "top" then value = box.top
+		if prop == "height" then value = box.height
+		if prop == "right" and box.left != null and box.width != null then
+			value = box.left + box.width
+		end if
+		if prop == "bottom" and box.top != null and box.height != null then
+			value = box.top + box.height
+		end if
+		if prop == "center" and box.left != null and box.width != null then
+			value = box.left + box.width / 2
+		end if
+		if prop == "middle" and box.top != null and box.height != null then
+			value = box.top + box.height / 2
+		end if
+		if value == null and box.hasIndex("_local") and box._local.hasIndex(prop) then
+			value = box._local[prop]
+			isScreen = false
+		end if
+		if value == null then return null
+		// Convert to context's parent-local coordinate space
+		if context == null or context.parent == null then
+			// Context is root: result should be screen coords
+			if not isScreen and box.parent != null then
+				if prop == "left" or prop == "right" or prop == "center" then
+					value = value + box.parent.left
+				else if prop == "top" or prop == "bottom" or prop == "middle" then
+					value = value + box.parent.top
+				end if
+			end if
+		else
+			// Context has a parent: result should be context-parent-local
+			if isScreen then
+				if prop == "left" or prop == "right" or prop == "center" then
+					value = value - context.parent.left
+				else if prop == "top" or prop == "bottom" or prop == "middle" then
+					value = value - context.parent.top
+				end if
+			else
+				// value is in box.parent-local; convert via screen to context-parent-local
+				// (parent screen coords guaranteed by parent-derive deps)
+				boxParentLeft = 0
+				boxParentTop = 0
+				if box.parent != null then
+					boxParentLeft = box.parent.left
+					boxParentTop = box.parent.top
+				end if
+				if prop == "left" or prop == "right" or prop == "center" then
+					value = value + boxParentLeft - context.parent.left
+				else if prop == "top" or prop == "bottom" or prop == "middle" then
+					value = value + boxParentTop - context.parent.top
+				end if
+			end if
+		end if
+		return value
 	end function
 
-	// Reset box properties
+	// Reset box properties; initialize _local map for spec evaluation results
 	for box in self.boxes
-		specs = box.specs
+		box._local = {}
 		for prop in ["left", "width", "top", "height", "right", "bottom", "center", "middle"]
-			if not specs.hasIndex(prop) or not eval.isNumber(specs[prop]) then
-				box.remove prop
-			else
-				box[prop] = specs[prop]
-			end if
+			box.remove prop
 		end for
 	end for
 
@@ -256,9 +308,18 @@ Layout.resolve = function
 		fn = box.fullName
 		hSpecKeys = []
 		vSpecKeys = []
+		// Parent derive deps: ensure parent screen coords are available
+		// before any child spec evaluates (needed for local-coord conversion)
+		parentDeps = []
+		if box.parent != null then
+			pfn = box.parent.fullName
+			parentDeps.push pfn + ":H"
+			parentDeps.push pfn + ":V"
+		end if
 		for prop in box.specs.indexes
 			nodeKey = fn + ":" + prop
 			deps = self.extractDeps(box.specs[prop], box)
+			deps = deps + parentDeps
 			nodes[nodeKey] = {"deps": deps, "box": box, "prop": prop}
 			if prop == "left" or prop == "width" or prop == "right" or prop == "center" then
 				hSpecKeys.push nodeKey
@@ -306,10 +367,12 @@ Layout.resolve = function
 		else
 			spec = node.box.specs[node.prop]
 			if spec isa number then
-				node.box[node.prop] = spec
+				node.box._local[node.prop] = spec
 			else
+				eval.context = node.box
 				processed = self.preprocess(spec, node.box)
-				node.box[node.prop] = eval.eval(processed)
+				node.box._local[node.prop] = eval.eval(processed)
+				eval.context = null
 			end if
 		end if
 	end for

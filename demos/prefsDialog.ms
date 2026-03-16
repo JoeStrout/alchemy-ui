@@ -14,6 +14,8 @@ import "grfon"
 import "layout"
 import "eval"
 
+max = function(a,b); if a < b then return b else return a; end function
+
 font = rl.LoadFontEx("assets/DejaVuSans.ttf", 24, null, 0)
 smallFont = rl.LoadFontEx("assets/DejaVuSans.ttf", 18, null, 0)
 
@@ -36,10 +38,8 @@ rl.SetWindowTitle "Prefs Dialog Demo"
 titleBarH = 28
 winX = 200
 winY = 100
-winW = 500
-winH = 450
-minWidth = 300
-minHeight = 200
+winW = 570
+winH = 470
 gripSize = 16
 dragging = false
 dragOffsetX = 0
@@ -89,11 +89,8 @@ resolveLayout = function
 	root.specs.top = winY + titleBarH
 	root.specs.width = winW
 	root.specs.height = winH - titleBarH
-	// Root is special -- we need to manually copy those properties (for now)
-	root.left = root.specs.left; root.top = root.specs.top
-	root.width = root.specs.width; root.height = root.specs.height
-	// Then, resolve the layout
 	lay.resolve
+	rl.SetWindowTitle "Preferences Dialog (" + winW + " x " + winH + ")"
 end function
 
 resolveLayout
@@ -185,10 +182,8 @@ while not rl.WindowShouldClose
 	end if
 
 	if resizing then
-		newW = mouse.x + resizeOffsetX - winX
-		newH = mouse.y + resizeOffsetY - winY
-		if newW < minWidth then newW = minWidth
-		if newH < minHeight then newH = minHeight
+		newW = max(mouse.x + resizeOffsetX - winX, lay.constants.minWindowWidth)
+		newH = max(mouse.y + resizeOffsetY - winY, lay.constants.minWindowHeight)
 		if newW != winW or newH != winH then
 			winW = newW
 			winH = newH
