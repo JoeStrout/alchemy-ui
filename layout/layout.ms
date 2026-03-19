@@ -108,7 +108,8 @@ Layout.preprocess = function(formula, box)
 	return tokens.join(" ")
 end function
 
-// Check if all identifiers in a formula are available in eval.variables.
+// Check if all identifiers in a formula are available in eval.vars
+// or eval.lookupFunc.
 Layout.canEval = function(formula)
 	if formula isa number then return true
 	tokens = eval.lex(formula)
@@ -116,7 +117,7 @@ Layout.canEval = function(formula)
 		c = tok[0]
 		if c >= "0" and c <= "9" then continue
 		if "+-*/^()=".indexOf(c) != null then continue
-		if eval.variables.hasIndex(tok) then continue
+		if eval.vars.hasIndex(tok) then continue
 		if eval.lookupFunc(tok, null) != null then continue
 		return false
 	end for
@@ -218,9 +219,9 @@ end function
 // Resolve all box positions via topological sort.
 Layout.resolve = function
 	// Set up eval lookupFunc
-	eval.variables = {}
+	eval.vars = {}
 	layout = self
-	eval.lookupFunc = function(ident, context)
+	eval.lookupFunc = function(ident)
 		if layout.constants.hasIndex(ident) then return layout.constants[ident]
 
 		dotPos = ident.indexOf(".")
@@ -364,15 +365,15 @@ Layout.resolve = function
 			self.deriveH node.box
 		else if node.prop == "deriveV" then
 			self.deriveV node.box
-		else
+		else if ["left", "top", "width", "height", "right", "bottom", "center", "middle"].contains(node.prop) then
 			spec = node.box.specs[node.prop]
 			if spec isa number then
 				node.box._local[node.prop] = spec
-			else
-				eval.context = node.box
+			else 
+				globals.context = node.box
 				processed = self.preprocess(spec, node.box)
 				node.box._local[node.prop] = eval.eval(processed)
-				eval.context = null
+				globals.context = null
 			end if
 		end if
 	end for
