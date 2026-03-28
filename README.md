@@ -30,6 +30,8 @@ The other hard part of any UI system is defining a set of built-in controls that
 - Group Box
 - Canvas (for arbitrary drawing or simple custom controls)
 - Tab Panel
+- Divider (draggable)
+- Switch
 
 ## Status
 
