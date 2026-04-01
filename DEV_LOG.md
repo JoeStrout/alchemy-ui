@@ -50,3 +50,16 @@ I purchased the Knobz UI set, which comes as PSDs that I can separate using [Pho
 
 However I'm tempted to just make my own control set using ArtText2, which is easy and fun to use.  And then I can be sure to make everything consistent.  For inspiration, I'll use both Knobz and Graphic, which has a nice dark-themed, subtle UI.
 
+
+## Mar 31, 2026
+
+OK, I've prototyped a lot of things and now I'm starting to shape it into something like a usable library.
+
+A key innovation (compared to past UI libraries I've made) is to separate out the definition of *how* to draw something (i.e. the source texture, UV coordinates, and details on how to stretch/slice/tile it) from information about *where* and *when* to draw it.  So the new alchemyUI file has a SourceFrame class that represents the former; it can load from a definition in a map, like we get from a GRFON file, and it can draw itself to any given destination rect.
+
+All this is working great on my external monitor, but things are still not working properly when the app is launched on a Retina (high-DPI) display.  Imma switch back to the raylib-miniscript project and try to pin this down.
+
+...OK, got it.  It turns out that the only way to make a Raylib window behave properly with HIGHDPI is to set FLAG_WINDOW_HIGHDPI _before_ calling InitWindow, which was not possible with the way raylib-miniscript worked before.  That's been fixed (scripts now call InitWindow themselves, when ready), and alchemyUI now has beautiful high-res images on a Retina display, and standard res on a standard display.  Note that you draw in standard coordinates in either case; Raylib takes care of almost all the details for you (though I imagine we'll have to load a font at double the desired resolution).
+
+Added a Font class which transparently takes care of loading (and caching) the correct font size for a given point size and current DPI.  Works like a charm.  In the test app, both image data (background and button) and font rendering are now perfect on both high-DPI and standard-DPI screens.
+
