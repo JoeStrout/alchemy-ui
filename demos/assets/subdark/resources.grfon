@@ -1,0 +1,55 @@
+// This file defines the layout of all the different UI image
+// resources in the atlas file, as well as other info about 
+// this particular GUI theme.
+
+// Design notes (all values given in logical pixels):
+// Button height: 32
+// Shadow distance:
+//		2.5 for big raised things like buttons;
+//		0.5 for flat things like pressed buttons
+
+
+title: Subdued Dark
+atlas: subdued-dark.png
+atlasScale: 2.0  // all images in this atlas are 2X their logical (on-screen) size!
+images: {
+	ButtonMedFlat: {
+		sourcePos: { 0; 88; 144; 88 }
+		outset: { 8; 12; 8; 12 }
+		hType: slice
+		hSides: { 56; 56 }
+		vType: stretch
+	}
+	ButtonMed: {
+		sourcePos: { 0; 0; 144; 88 }
+		outset: { 8; 12; 8; 12 }
+		hType: slice
+		hSides: { 56; 56 }
+		vType: stretch
+	}
+	DialogBG: {
+		sourcePos: { 144; 0; 32; 63 }
+		hType: stretch
+		vType: tile
+	}
+	Spinner_0: { sourcePos: { 176; 0; 64; 64 } }
+	Spinner_1: { sourcePos: { 176; 64; 64; 64 } }
+	Spinner_2: { sourcePos: { 176; 128; 64; 64 } }
+	Spinner_3: { sourcePos: { 176; 192; 64; 64 } }
+	Spinner_4: { sourcePos: { 240; 0; 64; 64 } }
+	Spinner_5: { sourcePos: { 240; 64; 64; 64 } }
+	Spinner_6: { sourcePos: { 240; 128; 64; 64 } }
+	Spinner_7: { sourcePos: { 240; 192; 64; 64 } }
+}
+fonts: {
+	// System font: used for most control captions, large/important labels, etc.
+	System: {
+		name: DejaVuSans
+		size: 20
+	}
+	// SmallSystem font: used for explanatory or detail text
+	SmallSystem: {
+		name: DejaVuSans
+		size: 14
+	}
+}

@@ -63,3 +63,20 @@ All this is working great on my external monitor, but things are still not worki
 
 Added a Font class which transparently takes care of loading (and caching) the correct font size for a given point size and current DPI.  Works like a charm.  In the test app, both image data (background and button) and font rendering are now perfect on both high-DPI and standard-DPI screens.
 
+
+## Apr 04, 2026
+
+Thinking about next steps: we have enough assets and core drawing code to make two very common controls, the push button and the static text.  So I should start with those, and get a simple working dialog built with the new system.  Though I'm also interesting in getting the Spinner up and running, since that will be our first animated control.
+
+But I'm short on time today.  Questions for next time:
+- Where does the theme (resources.grfon) data get stored?  Is that a global, or do we have an object that represents it and does all the drawing?
+- Similarly, where do we store fonts and resolve things like "System" (through the theme data) to an actual Font?
+- Where, when, and how do we load the Layout?  We should probably allow the UI controls to be used in a simple, code-driven manner, with no Layout at all.  But we still need to plan for the common case.
+
+## Apr 05, 2026
+
+I've defined a RenderContext class that keeps track of all the resource data (source frames and fonts), along with some other information needed, such as a "root" Rect that all control coordinates are relative to on the screen.  And with that, I've got a PushButton and a Spinner control class both mostly working.
+
+But I keep tripping over inverted Rects, because I'm using a Rect class originally designed for a bottom-up coordinate system, but trying to use them with Raylib's upside-down coordinate system.
+
+I need to solve this once and for all, and I'm going to do it by defining a Rect class that works for both systems -- by being agnostic about how it is used.  Instead of "top" and "bottom" it will speak only of "y" and "height" (and whether y is the top or bottom will depend on your usage context).  I've been thinking for a long time that I need to supply a good, solid, standard Rect class with Mini Micro, also for use with Soda and now raylib-miniscript; the latter (which is my current use case) is what drives the decision to define it in this coordinate-system-agnostic way.  But I think it will work.
