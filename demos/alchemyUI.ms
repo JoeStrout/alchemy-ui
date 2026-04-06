@@ -123,16 +123,16 @@ end function
 // All coordinates here are in SOURCE PIXELS, not logical (dest)
 // units.  outset may be a single number applied to all four sides,
 // or [hor, ver] values applied to horizontal and vertical sides, or
-// [left, top, right, bottom] values supplied separately. Similarly,
+// .x, top, right, bottom] values supplied separately. Similarly,
 // the hSides and vSides may be given as a single value, or a pair
-// of values [left, right] or [top, bottom].
+// of values .x, right] or [top, bottom].
 SourceFrame = {}
 SourceFrame.image = null  // Raylib image
 SourceFrame.srcR = null  // Rect describing source area in image
-SourceFrame.outset = null // [left, top, right, bottom] in atlas pixels
+SourceFrame.outset = null // .x, top, right, bottom] in atlas pixels
 SourceFrame.hType = STRETCH  // how to fill space horizontally
 SourceFrame.vType = STRETCH  // how to fill space vertically
-SourceFrame.hSides = null // [left, right] in atlas pixels
+SourceFrame.hSides = null // .x, right] in atlas pixels
 SourceFrame.vSides = null // [top, bottom] in atlas pixels
 SourceFrame.imageScale = 1  // ratio of atlas pixels to logical points
 
@@ -141,7 +141,7 @@ SourceFrame.MakeFromResData = function(resMap, image, imageScale=1)
 	noob.image = image
 	noob.imageScale = imageScale
 	r = resMap.sourcePos
-	noob.srcR = Rect.MakeLTWH(r[0], r[1], r[2], r[3])
+	noob.srcR = Rect.MakeXYWH(r[0], r[1], r[2], r[3])
 	noob.hType = resMap.get("hType", noob.hType).upper
 	noob.vType = resMap.get("vType", noob.vType).upper
 	os = resMap.get("outset", 0)
@@ -156,12 +156,12 @@ end function
 SourceFrame.render = function(destR)
 	// Draw our source frame to the given destination rect
 	// (given in logical units, i.e. points).
-	srcX = self.srcR.left; srcY = self.srcR.top
+	srcX = self.srcR.x; srcY = self.srcR.y
 	srcW = self.srcR.width; srcH = self.srcR.height
 	scale = self.imageScale
 
 	// Start with the dest rect in logical points
-	destX = destR.left; destY = destR.top
+	destX = destR.x; destY = destR.y
 	destW = destR.width; destH = destR.height
 
 	// Expand dest to account for outset (atlas pixels → logical points)
@@ -250,7 +250,7 @@ end function
 // also includes a pipeline for handling events.
 RenderContext = {}
 // base (or "root") Rect that all control coordinates are relative to:
-RenderContext.root = Rect.MakeLTWH(0, 0, 960, 640)
+RenderContext.root = Rect.MakeXYWH(0, 0, 960, 640)
 // all the SourceFrames in the resources file; map by name:
 RenderContext.sourceFrames = null
 // all the Fonts in the rources file; map by name:
@@ -282,6 +282,8 @@ RenderContext.MakeFromResData = function(data, dirPath)
 		rc.fonts[kv.key] = Font.Load(fontPath, kv.value.size)
 	end for
 
+	rc.colors = data.colors
+	
 	return rc
 end function
 
@@ -291,11 +293,12 @@ end function
 Control = new Rect
 Control.name = "Control"
 Control.sourceFrame = null
+
 Control.Make = function(name, bounds)
 	noob = new self
 	if name then noob.name = name
-	if bounds then noob.setLTWH(
-	  bounds.left, bounds.bottom, bounds.width, bounds.height)
+	if bounds then noob.setXYWH(
+	  bounds.x, bounds.y, bounds.width, bounds.height)
 	return noob
 end function
 
@@ -310,8 +313,6 @@ Control.canCaptureMouse = function(context, xy)
 	// if this is definitely a click for this control.
 	if @self.captureMouse == null then return 0
 	bounds = self.relativeTo(context.root)
-	print "self y: " + self.top + " - " + self.bottom
-	print "bounds y: " + bounds.top + " - " + bounds.bottom
 	if bounds.contains(xy) then return 1
 	bounds.outset 10 * rl.GetWindowScaleDPI.x
 	if bounds.contains(xy) then return 0.5
@@ -331,22 +332,27 @@ PushButton = new Control
 PushButton.name = "PushButton"
 PushButton.caption = "caption"
 PushButton.trackingMouse = false
+Control.onClick = null  // function called on successful click
 
 PushButton.render = function(context)
 	destR = self.relativeTo(context.root)
+	captionColor = context.colors.buttonCaption
 	src = context.sourceFrames.ButtonMed
 	if self.trackingMouse then
+		inBounds = destR.contains(rl.GetMouseX, rl.GetMouseY)
 		if rl.IsMouseButtonReleased then
 			self.trackingMouse = false
-			print "destR y: " + destR.top + " - " + destR.bottom
-		else if destR.contains(rl.GetMouseX, rl.GetMouseY) then
+			if inBounds then self.onClick
+		else if inBounds then
 			src = context.sourceFrames.ButtonMedFlat
+			captionColor = context.colors.buttonPressedCaption
+			destR.offset 0, 1
 		end if
 	end if
 	src.render destR
 	font = context.fonts.System
-	font.printCentered self.caption, destR.centerX, destR.top+6,
-			font.defaultSize, rl.WHITE
+	font.printCentered self.caption, destR.centerX, destR.y+6,
+			font.defaultSize, captionColor
 end function
 
 PushButton.captureMouse = function
@@ -362,6 +368,15 @@ StaticText = new Control
 StaticText.name = "StaticText"
 StaticText.text = "Text goes here"
 StaticText.font = "System"
+StaticText.color = null  // specify to override standard theme colors
+
+StaticText.render = function(context)
+	destR = self.relativeTo(context.root)
+	color = self.color
+	if not color then color = context.colors.text
+	font = context.fonts[self.font]
+	font.print self.text, destR.x, destR.y, font.defaultSize, color
+end function
 
 //----------------------------------------------------------------------
 // Spinner: a control that draws a spinning symbol indicating to the
@@ -395,19 +410,28 @@ test = function
 	atlasTex = rl.LoadTexture("assets/subdark/" + resData.atlas)
 	backgroundSrc = context.sourceFrames.DialogBG
 
-	btn = PushButton.Make("HelloBtn", Rect.MakeLTWH(400-50, 500, 100, 32))
+	btn = PushButton.Make("HelloBtn", Rect.MakeXYWH(480-50, 500, 100, 32))
 	btn.caption = "Hello!"
+	btn.onClick = function
+		responses = ["Nice click.", "Stop that!", "Don't press that button.",
+		  "Hi.", "Hello yourself.", "Hi there!", "Clickity click.", "Don't push it."]
+		label.text = responses[rnd * responses.len]
+	end function
 	
-	spinner = Spinner.Make("Spinner", Rect.MakeLTWH(480, 500, 32, 32))
+	spinner = Spinner.Make("Spinner", Rect.MakeXYWH(btn.maxX + 20, btn.y, 32, 32))
 
-	controls = [btn, spinner]
+	label = StaticText.Make("Label1", Rect.MakeXYMaxXMaxY(
+		btn.x, btn.y - 50, spinner.maxX, btn.y - 10))
+	label.text = "This is a label."
+
+	controls = [btn, spinner, label]
 	
-	bgDestR = Rect.MakeLTWH(0, 0, 800, 600)
+	bgDestR = Rect.MakeXYWH(0, 0, 800, 600)
 	captionFont = context.fonts.System
 
 	while not rl.WindowShouldClose
 		yield
-		rl.SetWindowTitle rl.GetMouseX + ", " + rl.GetMouseY
+		//rl.SetWindowTitle rl.GetMouseX + ", " + rl.GetMouseY
 
 		curScale = rl.GetWindowScaleDPI
 		if curScale != dpiScale then

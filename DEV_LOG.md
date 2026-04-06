@@ -80,3 +80,7 @@ I've defined a RenderContext class that keeps track of all the resource data (so
 But I keep tripping over inverted Rects, because I'm using a Rect class originally designed for a bottom-up coordinate system, but trying to use them with Raylib's upside-down coordinate system.
 
 I need to solve this once and for all, and I'm going to do it by defining a Rect class that works for both systems -- by being agnostic about how it is used.  Instead of "top" and "bottom" it will speak only of "y" and "height" (and whether y is the top or bottom will depend on your usage context).  I've been thinking for a long time that I need to supply a good, solid, standard Rect class with Mini Micro, also for use with Soda and now raylib-miniscript; the latter (which is my current use case) is what drives the decision to define it in this coordinate-system-agnostic way.  But I think it will work.
+
+OK, that's done and while the nomenclature isn't quite as nice, I like that we can use the same code in both coordinate systems.  And as a plus, you should be able to pass a Rect to any Raylib function that expects a rectangle, without any extra conversion step.
+
+The alchemyUI script now has three controls: a static text, a push button, and a spinner; and every time you click the button, the message in the static text changes.  All the colors and fonts, as well as the source images, are defined in subdark/resources.grfon.  You could change the UI to a completely different look just by loading a different resource set.

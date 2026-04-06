@@ -53,3 +53,11 @@ fonts: {
 		size: 14
 	}
 }
+colors: {
+	background: #444444
+	text: #EEEEEE
+	strongText: #FFFFFF
+	weakText: #CCCCCC
+	buttonCaption: #FFFFFF
+	buttonPressedCaption: #CCCCFF
+}
